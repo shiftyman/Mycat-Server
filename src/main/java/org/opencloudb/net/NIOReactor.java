@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.log4j.Logger;
 
 /**
- * 网络事件反应器
+ * 网络事件反应器(Acceptor 和 connector共享)
  * 
  * @author mycat
  * 
@@ -45,7 +45,7 @@ import org.apache.log4j.Logger;
 public final class NIOReactor {
 	private static final Logger LOGGER = Logger.getLogger(NIOReactor.class);
 	private final String name;
-	private final RW reactorR;
+	private final RW reactorR;// 独立线程监听网络读写
 
 	public NIOReactor(String name) throws IOException {
 		this.name = name;
@@ -75,7 +75,7 @@ public final class NIOReactor {
 		private long reactCount;
 
 		private RW() throws IOException {
-			this.selector = Selector.open();
+			this.selector = Selector.open(); // 和监听连接事件的selector不同
 			this.registerQueue = new ConcurrentLinkedQueue<AbstractConnection>();
 		}
 
@@ -153,7 +153,7 @@ public final class NIOReactor {
 			}
 			while ((c = registerQueue.poll()) != null) {
 				try {
-					((NIOSocketWR) c.getSocketWR()).register(selector);
+					((NIOSocketWR) c.getSocketWR()).register(selector);// 注册R事件
 					c.register();
 				} catch (Exception e) {
 					c.close("register err" + e.toString());

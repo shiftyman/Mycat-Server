@@ -4,11 +4,24 @@ import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ConQueue {
+
+	/**
+	 * 自动提交的连接
+	 */
 	private final ConcurrentLinkedQueue<BackendConnection> autoCommitCons = new ConcurrentLinkedQueue<BackendConnection>();
+
+	/**
+	 * 手动提交的连接
+	 */
 	private final ConcurrentLinkedQueue<BackendConnection> manCommitCons = new ConcurrentLinkedQueue<BackendConnection>();
 	private long executeCount;
 
-	public BackendConnection takeIdleCon(boolean autoCommit) {
+	/**
+	 * 优先返回同类型（是否自动提交）的空闲连接
+	 * @param conMeta
+	 * @return
+	 */
+	public BackendConnection takeIdleCon(ConnectionMeta conMeta) {
 		ConcurrentLinkedQueue<BackendConnection> f1 = autoCommitCons;
 		ConcurrentLinkedQueue<BackendConnection> f2 = manCommitCons;
 

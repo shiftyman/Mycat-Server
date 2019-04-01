@@ -384,9 +384,12 @@ public abstract class AbstractConnection implements NIOConnection {
 
         }   else
         {
+			// 首先加入到写队列，等写线程RW线程调度写
             writeQueue.offer(buffer);
         }
 
+		// 但是，RW线程的工作机理是，finish写队列的所有任务后，取消OP_WRITE的监听，所以这里要么wakeup 读写线程，要么自己写。
+        // 由于写是异步的，自己直接先写一下，写不完再注册OP_WRITE事件由RW线程代劳写
 		// if ansyn write finishe event got lock before me ,then writing
 		// flag is set false but not start a write request
 		// so we check again

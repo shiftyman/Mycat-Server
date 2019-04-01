@@ -27,6 +27,9 @@ import org.apache.log4j.Logger;
 import org.opencloudb.mysql.nio.handler.ResponseHandler;
 import org.opencloudb.route.RouteResultsetNode;
 
+/**
+ * DB物理实例，包含一个 {@link PhysicalDBPool}
+ */
 public class PhysicalDBNode {
 	protected static final Logger LOGGER = Logger
 			.getLogger(PhysicalDBNode.class);

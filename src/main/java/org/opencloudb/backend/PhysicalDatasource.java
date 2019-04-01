@@ -43,6 +43,10 @@ import org.opencloudb.mysql.nio.handler.NewConnectionRespHandler;
 import org.opencloudb.mysql.nio.handler.ResponseHandler;
 import org.opencloudb.util.TimeUtil;
 
+/**
+ * 物理实例。
+ * 包含所有此实例的空闲连接，conMap
+ */
 public abstract class PhysicalDatasource {
 	private static final Logger LOGGER = Logger
 			.getLogger(PhysicalDatasource.class);
@@ -50,7 +54,7 @@ public abstract class PhysicalDatasource {
 	private final String name;
 	private final int size;
 	private final DBHostConfig config;
-	private final ConMap conMap = new ConMap();
+	private final ConMap conMap = new ConMap();//空闲连接池
 	private DBHeartbeat heartbeat;
 	private final boolean readNode;
 	private volatile long heartbeatRecoveryTime;
@@ -321,7 +325,7 @@ public abstract class PhysicalDatasource {
 			String schema) {
 
 		conn.setBorrowed(true);
-		if (!conn.getSchema().equals(schema)) {
+		if (!conn.getSchema().equals(schema)) {//同步元信息，设置连接
 			// need do schema syn in before sql send
 			conn.setSchema(schema);
 		}

@@ -267,6 +267,7 @@ public class MycatServer {
 
 		} else {
 			LOGGER.info("using nio network handler ");
+			// 主动连接、被动server、被动管理server共用reactor池
 			NIOReactorPool reactorPool = new NIOReactorPool(
 					BufferPool.LOCAL_BUF_THREAD_PREX + "NIOREACTOR",
 					processors.length);

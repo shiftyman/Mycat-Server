@@ -2,6 +2,9 @@ package org.opencloudb.net;
 
 import java.io.IOException;
 
+/**
+ * Reactor pool, 用于数据读写, acceptor和connector共享该池
+ */
 public class NIOReactorPool {
 	private final NIOReactor[] reactors;
 	private volatile int nextReactor;

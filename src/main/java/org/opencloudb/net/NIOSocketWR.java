@@ -32,6 +32,14 @@ public class NIOSocketWR extends SocketWR {
 		}
 	}
 
+	/**
+	 * 写数据方法。
+     *
+     * <p>
+     *     先写writeBuffer，然后顺序写writeQueue中的任务，写不完，注册OP_WRITE事件，写完，取消OP_WRITE事件
+     *     此方法可能在任务线程 or RWReactor中调用。
+     * </p>
+	 */
 	public void doNextWriteCheck() {
 
 		if (!writing.compareAndSet(false, true)) {
@@ -39,8 +47,10 @@ public class NIOSocketWR extends SocketWR {
 		}
 
 		try {
+			// 写数据
 			boolean noMoreData = write0();
 			writing.set(false);
+			// 如果数据没写完，则开始监听可写事件，后续就绪后再处理写操作, {@see enableWrite}
 			if (noMoreData && con.writeQueue.isEmpty()) {
 				if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
 					disableWrite();
@@ -183,7 +193,7 @@ public class NIOSocketWR extends SocketWR {
 			con.readBuffer = theBuffer;
 		}
 		int got = channel.read(theBuffer);
-		con.onReadData(got);
+		con.onReadData(got); // 数据处理
 
 	}
 

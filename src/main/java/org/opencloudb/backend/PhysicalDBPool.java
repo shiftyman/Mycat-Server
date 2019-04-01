@@ -40,6 +40,9 @@ import org.opencloudb.heartbeat.DBHeartbeat;
 import org.opencloudb.mysql.nio.handler.GetConnectionHandler;
 import org.opencloudb.mysql.nio.handler.ResponseHandler;
 
+/**
+ * 物理节点的连接池，包含多个 {@link PhysicalDatasource}
+ */
 public class PhysicalDBPool {
 	
 	protected static final Logger LOGGER = Logger.getLogger(PhysicalDBPool.class);

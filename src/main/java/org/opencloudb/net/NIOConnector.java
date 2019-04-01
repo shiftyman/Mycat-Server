@@ -121,6 +121,7 @@ public final class NIOConnector extends Thread implements SocketConnector {
 				c.setProcessor(processor);
                 //与特定NIOReactor绑定监听读写
 				NIOReactor reactor = reactorPool.getNextReactor();
+				// 连接完毕，注册RW事件监听
 				reactor.postRegister(c);
 			}
 		} catch (Exception e) {

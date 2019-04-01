@@ -38,6 +38,8 @@ import org.opencloudb.MycatServer;
 import org.opencloudb.net.factory.FrontendConnectionFactory;
 
 /**
+ * 处理网络连接，然后注册到reactor中监听读写事件
+ *
  * @author mycat
  */
 public final class NIOAcceptor extends Thread  implements SocketAcceptor{

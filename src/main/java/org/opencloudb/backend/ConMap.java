@@ -13,6 +13,10 @@ import org.opencloudb.net.NIOProcessor;
 
 public class ConMap {
 	// key -schema
+	/**
+	 * key：schema
+	 * value：连接空闲队列(包括自动提交、非自动提交两个队列)
+	 */
 	private final ConcurrentHashMap<String, ConQueue> items = new ConcurrentHashMap<String, ConQueue>();
 
 	public ConQueue getSchemaConQueue(String schema) {
@@ -25,9 +29,15 @@ public class ConMap {
 		return queue;
 	}
 
-	public BackendConnection tryTakeCon(final String schema, boolean autoCommit) {
-		final ConQueue queue = items.get(schema);
-		BackendConnection con = tryTakeCon(queue, autoCommit);
+	/**
+	 * 根据schema获取可用连接，如果获取不到，获取其他schema的连接。（此处都是同一个mysql实例）
+	 * 优先获取同类型（是否自动提交）的连接
+	 * @param conMeta
+	 * @return
+	 */
+	public BackendConnection tryTakeCon(final ConnectionMeta conMeta) {
+		final ConQueue queue = items.get(conMeta.getSchema());
+		BackendConnection con = tryTakeCon(queue, conMeta);
 		if (con != null) {
 			return con;
 		} else {
