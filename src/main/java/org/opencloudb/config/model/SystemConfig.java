@@ -29,7 +29,7 @@ import java.io.IOException;
 import org.opencloudb.config.Isolations;
 
 /**
- * 系统基础配置项
+ * 系统基础配置项。对应server.xml
  *
  * @author mycat
  */
@@ -81,8 +81,20 @@ public final class SystemConfig {
 	private int catletClassCheckSeconds = 60;
 	// sql execute timeout (second)
 	private long sqlExecuteTimeout = 300;
+
+	/**
+	 * 清理NIOProcessor上前后端空闲、超时和关闭连接的时间间隔，默认为1秒
+	 */
 	private long processorCheckPeriod;
+
+	/**
+	 * 对后端连接进行空闲、超时检查的时间间隔，默认300秒
+	 */
 	private long dataNodeIdleCheckPeriod;
+
+	/**
+	 * 对后端所有读、写库发起心跳的时间间隔，默认为10秒
+	 */
 	private long dataNodeHeartbeatPeriod;
 	private String clusterHeartbeatUser;
 	private String clusterHeartbeatPass;

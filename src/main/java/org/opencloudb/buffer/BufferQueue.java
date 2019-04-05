@@ -35,6 +35,8 @@ import java.util.List;
  */
 public final class BufferQueue {
 	private final long total;
+
+	// 因为是ThreadLocal，所以这里线程安全
 	private final LinkedList<ByteBuffer> items = new LinkedList<ByteBuffer>();
 
 	public BufferQueue(long capacity) {

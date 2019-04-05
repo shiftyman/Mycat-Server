@@ -10,8 +10,8 @@ import java.text.SimpleDateFormat;
 /**
  * 先根据日期分组，再根据时间hash使得短期内数据分布的更均匀
  * 优点可以避免扩容时的数据迁移，又可以一定程度上避免范围分片的热点问题
- * 要求日期格式尽量精确些，不然达不到局部均匀的目的
- *
+ *  * 要求日期格式尽量精确些，不然达不到局部均匀的目的
+ *  *
  *
  */
 public class PartitionByRangeDateHash extends AbstractPartitionAlgorithm implements RuleAlgorithm

@@ -18,10 +18,9 @@ public class ConQueue {
 
 	/**
 	 * 优先返回同类型（是否自动提交）的空闲连接
-	 * @param conMeta
 	 * @return
 	 */
-	public BackendConnection takeIdleCon(ConnectionMeta conMeta) {
+	public BackendConnection takeIdleCon(boolean autoCommit) {
 		ConcurrentLinkedQueue<BackendConnection> f1 = autoCommitCons;
 		ConcurrentLinkedQueue<BackendConnection> f2 = manCommitCons;
 

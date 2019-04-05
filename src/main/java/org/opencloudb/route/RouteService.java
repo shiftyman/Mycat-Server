@@ -43,11 +43,15 @@ import org.opencloudb.route.handler.HintSQLHandler;
 import org.opencloudb.server.ServerConnection;
 import org.opencloudb.server.parser.ServerParse;
 
+/**
+ * 路由服务类(入口)
+ * 通过 {@link RouteStrategy#route 获取路由}
+ */
 public class RouteService {
     private static final Logger LOGGER = Logger
             .getLogger(RouteService.class);
     public static final String MYCAT_HINT_TYPE = "_mycatHintType";
-    private final CachePool sqlRouteCache;
+    private final CachePool sqlRouteCache;  // 路由cache
 	private final LayerCachePool tableId2DataNodeCache;	
 
 	private final String OLD_MYCAT_HINT = "/*!mycat:"; 	// 处理自定义分片注解, 注解格式：/*!mycat: type = value */ sql

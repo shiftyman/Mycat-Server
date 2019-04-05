@@ -37,6 +37,9 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUnionQuery;
 import com.alibaba.druid.util.JdbcConstants;
 import com.alibaba.druid.wall.spi.WallVisitorUtils;
 
+/**
+ * select语句解析器 todo
+ */
 public class DruidSelectParser extends DefaultDruidParser {
 
 
@@ -50,10 +53,11 @@ public class DruidSelectParser extends DefaultDruidParser {
 			MySqlSelectQueryBlock mysqlSelectQuery = (MySqlSelectQueryBlock)selectStmt.getSelect().getQuery();
 
 				 parseOrderAggGroupMysql(schema, stmt,rrs, mysqlSelectQuery);
-				 //更改canRunInReadDB属性
+				 // 更改canRunInReadDB属性
+			     // 这里是select for update这种带锁的查询，只允许在主库执行
 				 if ((mysqlSelectQuery.isForUpdate() || mysqlSelectQuery.isLockInShareMode()) && rrs.isAutocommit() == false)
 				 {
-					 rrs.setCanRunInReadDB(false);
+					 rrs.setCanRunInReadDB(false);// 不允许在从库执行
 				 }
 
 		} else if (sqlSelectQuery instanceof MySqlUnionQuery) { 
@@ -98,7 +102,7 @@ public class DruidSelectParser extends DefaultDruidParser {
 				//只处理有别名的情况，无别名添加别名，否则某些数据库会得不到正确结果处理
 				int mergeType = MergeCol.getMergeType(method);
                 if (MergeCol.MERGE_AVG == mergeType&&isRoutMultiNode(schema,rrs))
-                {    //跨分片avg需要特殊处理，直接avg结果是不对的
+                {    //跨分片avg需要特殊处理，直接avg结果是不对的 @todo 特殊场景？
                     String colName = item.getAlias() != null ? item.getAlias() : method + i;
                     SQLSelectItem sum =new SQLSelectItem();
                     String sumColName = colName + "SUM";

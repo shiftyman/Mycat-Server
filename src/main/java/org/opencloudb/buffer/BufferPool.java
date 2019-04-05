@@ -34,6 +34,18 @@ import org.apache.log4j.Logger;
  * @author mycat
  * 
  * Allocate from heap if direct buffer OOM occurs
+ *
+ * 这是一个ByteBuffer的内存池，
+ *
+ *
+ * 由ThreadLocalPool组合而成，每次从中获取buffer都会优先获取ThreadLocalPool中的buffer，未命中才会获取BufferPool中的buffer。
+ * BufferPool中的buffer是每个NIOProcessor共享的，如果堆外内存OOM，则在堆内分配。
+ *
+ * bufferPoll = 默认bufferChunkSize（4096） * processor * 1000
+ * 总长度 = bufferPool / bufferChunk  （add by windlike）
+ *
+ * 使用入口: {@link BufferPool#allocate()} 和 {@link BufferPool#recycle(ByteBuffer)}
+ *
  * @author Uncle-pan
  * @since 2016-03-30
  */
@@ -90,8 +102,14 @@ public final class BufferPool {
 		return capactiy + newCreated;
 	}
 
+	/**
+	 * 核心接口
+	 * @return
+	 */
 	public ByteBuffer allocate() {
 		ByteBuffer node = null;
+
+		// 优先使用ThreadLocal的池
 		if (isLocalCacheThread()) {
 			// allocate from threadlocal
 			node = localBufferPool.get().poll();
@@ -99,17 +117,20 @@ public final class BufferPool {
 				return node;
 			}
 		}
+
+		// 如果ThreadLocal中获取失败，则到共享池中获取
 		node = items.poll();
 		if (node == null) {
 			// Allocate from heap if direct buffer OOM occurs
 			// @author Uncle-pan
 			// @since 2016-03-30
 			try{
+				// 获取失败，优先堆外内存分配
 				node = this.createDirectBuffer(chunkSize);
 				++newCreated;
 			}catch(final OutOfMemoryError oom){
 				LOGGER.warn("Direct buffer OOM occurs: so allocate from heap", oom);
-				node = this.createTempBuffer(chunkSize);
+				node = this.createTempBuffer(chunkSize); // 到堆内分配吧
 			}
 		}
 		return node;
@@ -130,6 +151,10 @@ public final class BufferPool {
 		return true;
 	}
 
+	/**
+	 * 核心接口2：回收
+	 * @param buffer
+	 */
 	public void recycle(ByteBuffer buffer) {
 		if (!checkValidBuffer(buffer)) {
 			return;

@@ -585,13 +585,24 @@ public class RouterUtil {
 		return rrs;
 	}
 
+	/**
+	 * 获取一个路由节点
+	 * <p>
+	 * 		如果不分库的，直接获取；如果分库的，随机获取一个（为什么？此处用于做MetaRead的，每个库都能做）
+	 * </p>
+	 *
+	 * @param rrs
+	 * @param schema
+	 * @param tableName
+	 * @param sql
+	 */
 	public static void routeForTableMeta(RouteResultset rrs,
 			SchemaConfig schema, String tableName, String sql) {
 		String dataNode = null;
 		if (isNoSharding(schema,tableName)) {//不分库的直接从schema中获取dataNode
 			dataNode = schema.getDataNode();
 		} else {
-			dataNode = getMetaReadDataNode(schema, tableName);
+			dataNode = getMetaReadDataNode(schema, tableName);//随机获取一个节点
 		}
 
 		RouteResultsetNode[] nodes = new RouteResultsetNode[1];

@@ -27,6 +27,9 @@ import com.alibaba.druid.sql.ast.expr.SQLIntegerExpr;
 import com.alibaba.druid.sql.ast.statement.SQLInsertStatement.ValuesClause;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 
+/**
+ * insert语句解析器
+ */
 public class DruidInsertParser extends DefaultDruidParser {
 	@Override
 	public void visitorParse(RouteResultset rrs, SQLStatement stmt, MycatSchemaStatVisitor visitor) throws SQLNonTransientException {
@@ -35,6 +38,9 @@ public class DruidInsertParser extends DefaultDruidParser {
 	
 	/**
 	 * 考虑因素：isChildTable、批量、是否分片
+	 *
+	 * 解析得到的结果在 {@link DefaultDruidParser#ctx}
+	 *
 	 */
 	@Override
 	public void statementParse(SchemaConfig schema, RouteResultset rrs, SQLStatement stmt) throws SQLNonTransientException {
@@ -42,7 +48,7 @@ public class DruidInsertParser extends DefaultDruidParser {
 		String tableName = StringUtil.removeBackquote(insert.getTableName().getSimpleName()).toUpperCase();
 
 		ctx.addTable(tableName);
-		if(RouterUtil.isNoSharding(schema,tableName)) {//整个schema都不分库或者该表不拆分
+		if(RouterUtil.isNoSharding(schema,tableName)) {//整个schema都不分库或者该表不拆分，通过schemaConfig配置获得
 			RouterUtil.routeForTableMeta(rrs, schema, tableName, rrs.getStatement());
 			rrs.setFinishedRoute(true);
 			return;
@@ -55,7 +61,7 @@ public class DruidInsertParser extends DefaultDruidParser {
 			LOGGER.warn(msg);
 			throw new SQLNonTransientException(msg);
 		} else {
-			//childTable的insert直接在解析过程中完成路由
+			//childTable的insert直接在解析过程中完成路由(忽略，没必要探究了 @windlike)
 			if (tc.isChildTable()) {
 				parserChildTable(schema, rrs, tableName, insert);
 				return;
@@ -157,10 +163,12 @@ public class DruidInsertParser extends DefaultDruidParser {
 	 * 单条insert（非批量）
 	 * @param schema
 	 * @param rrs
-	 * @param partitionColumn
+	 * @param partitionColumn sharding的字段，从配置中获得 by windlike
 	 * @param tableName
 	 * @param insertStmt
 	 * @throws SQLNonTransientException
+	 *
+	 * @return 处理结果放在 ctx.addRouteCalculateUnit
 	 */
 	private void parserSingleInsert(SchemaConfig schema, RouteResultset rrs, String partitionColumn,
 			String tableName, MySqlInsertStatement insertStmt) throws SQLNonTransientException {
@@ -203,8 +211,10 @@ public class DruidInsertParser extends DefaultDruidParser {
 	
 	/**
 	 * insert into .... select .... 或insert into table() values (),(),....
+	 * 这里会进行路由拆分，拆成不同dataNode的batchInsert
+	 *
 	 * @param schema
-	 * @param rrs
+	 * @param rrs 处理结果
 	 * @param insertStmt
 	 * @throws SQLNonTransientException
 	 */
@@ -225,6 +235,8 @@ public class DruidInsertParser extends DefaultDruidParser {
 				Map<Integer,List<ValuesClause>> nodeValuesMap = new HashMap<Integer,List<ValuesClause>>();
 				TableConfig tableConfig = schema.getTables().get(tableName);
 				AbstractPartitionAlgorithm algorithm = tableConfig.getRule().getRuleAlgorithm();
+
+				// 这一段主要从insert的values中寻找每一行的shadingValue，然后通过它计算这行应该分配的路由节点
 				for(ValuesClause valueClause : valueClauseList) {
 					if(valueClause.getValues().size() != columnNum) {
 						String msg = "bad insert sql columnSize != valueSize:"
@@ -243,7 +255,7 @@ public class DruidInsertParser extends DefaultDruidParser {
 						shardingValue = charExpr.getText();
 					}
 					
-					Integer nodeIndex = algorithm.calculate(shardingValue);
+					Integer nodeIndex = algorithm.calculate(shardingValue); // 计算分片index
 					//没找到插入的分片
 					if(nodeIndex == null) {
 						String msg = "can't find any valid datanode :" + tableName 
@@ -256,7 +268,9 @@ public class DruidInsertParser extends DefaultDruidParser {
 					}
 					nodeValuesMap.get(nodeIndex).add(valueClause);
 				}
-				
+
+				// nodeValuesMap：nodeIndex：ValueList
+				// 封装结果到Rss中
 				RouteResultsetNode[] nodes = new RouteResultsetNode[nodeValuesMap.size()];
 				int count = 0;
 				for(Map.Entry<Integer,List<ValuesClause>> node : nodeValuesMap.entrySet()) {
