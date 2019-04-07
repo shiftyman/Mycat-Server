@@ -13,6 +13,10 @@ public class BatchSQLJob {
 
 	public void addJob(SQLJob newJob, boolean parallExecute) {
 
+		// 这个有点扯淡，没有独立的线程/线程池去做job处理，而是靠addJob的线程来run。
+		// 假如并行，那么当前线程直接run，因为多线程并发到达，所以这里相当于多线程并行地run各自的job
+		// 假如不并行，那么这里先放到队列waitingJobs中，如果当前无任务run，则run一个任务，这样会达到单线程顺序run的效果，
+		// 但是可能会有一个job一直囤积直到下一个addjob发生
 		if (parallExecute) {
 			runJob(newJob);
 		} else {

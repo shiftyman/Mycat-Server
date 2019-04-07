@@ -56,7 +56,7 @@ public class ServerQueryHandler implements FrontendQueryHandler {
 			LOGGER.debug(new StringBuilder().append(c).append(sql).toString());
 		}
 		//
-		int rs = ServerParse.parse(sql);
+		int rs = ServerParse.parse(sql);// parse解析得到sql类型，比如insert、delete等
 		int sqlType = rs & 0xff;
 		
 		switch (sqlType) {
@@ -121,7 +121,7 @@ public class ServerQueryHandler implements FrontendQueryHandler {
 				c.writeErrMessage(ErrorCode.ER_USER_READ_ONLY, "User readonly");
 				break;
 			}
-			if(QuarantineHandler.handle(sql, c)){
+			if(QuarantineHandler.handle(sql, c)){// 隔离检测，忽略
 				c.execute(sql, rs & 0xff);
 			}
 		}

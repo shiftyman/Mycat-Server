@@ -634,23 +634,38 @@ public class RouterUtil {
 		return dataNode;
 	}
 
-	/**
-	 * 根据 ER分片规则获取路由集合
-	 *
-	 * @param stmt            执行的语句
-	 * @param rrs      		     数据路由集合
-	 * @param tc	      	     表实体
-	 * @param joinKeyVal      连接属性
-	 * @return RouteResultset(数据路由集合)	 * 
-	 * @throws java.sql.SQLNonTransientException
-	 * @author mycat
-	 */
+//	/**
+//	 * 根据 ER分片规则获取路由集合
+//	 *
+//	 * @param stmt            执行的语句
+//	 * @param rrs      		     数据路由集合
+//	 * @param tc	      	     表实体
+//	 * @param joinKeyVal      连接属性
+//	 * @return RouteResultset(数据路由集合)	 *
+//	 * @throws java.sql.SQLNonTransientException
+//	 * @author mycat
+//	 */
 
+	/**
+	 * 通过ER表配置找到父亲表的路由
+	 * <p>此处是ER跨库join问题处理，需要确保子表和父表的路由一致，才能进行同库join操作
+	 * @param sc
+	 * @param schema
+	 * @param sqlType
+	 * @param stmt
+	 * @param rrs
+	 * @param tc
+	 * @param joinKeyVal
+	 * @return
+	 * @throws SQLNonTransientException
+	 */
 	public static RouteResultset routeByERParentKey(ServerConnection sc,SchemaConfig schema,
                                                     int sqlType,String stmt,
 			RouteResultset rrs, TableConfig tc, String joinKeyVal)
 			throws SQLNonTransientException {
-		
+
+		// 父子表配置，只支持2级，多级的话返回null
+		// 另一个条件是：parent表的分区key=child表的parentKey（规避配置错误）
 		// only has one parent level and ER parent key is parent
 		// table's partition key
 		if (tc.isSecondLevel()
@@ -1191,7 +1206,7 @@ public class RouterUtil {
 		String tableName = StringUtil.getTableName(origSQL).toUpperCase();
 		final TableConfig tc = schema.getTables().get(tableName);
 
-		if (null != tc && tc.isChildTable()) {
+		if (null != tc && tc.isChildTable()) {// 当前schema是否是一个child table
 			final RouteResultset rrs = new RouteResultset(origSQL, ServerParse.INSERT);
 			String joinKey = tc.getJoinKey();
 			MySqlInsertStatement insertStmt = (MySqlInsertStatement) (new MySqlStatementParser(origSQL)).parseInsert();
@@ -1214,6 +1229,7 @@ public class RouterUtil {
 			String sql = insertStmt.toString();
 
 			// try to route by ER parent partion key
+			// 此处是ER跨库join问题处理，需要确保子表和父表的路由一致，才能进行同库join操作
 			RouteResultset theRrs = RouterUtil.routeByERParentKey(sc, schema, ServerParse.INSERT, sql, rrs, tc, joinKeyVal);
 
 			if (theRrs != null) {

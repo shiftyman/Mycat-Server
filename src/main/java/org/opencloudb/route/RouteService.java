@@ -89,7 +89,7 @@ public class RouteService {
         /*!mycat: schema = test */
         boolean isMatchOldHint = stmt.startsWith(OLD_MYCAT_HINT);
         boolean isMatchNewHint = stmt.startsWith(NEW_MYCAT_HINT);
-		if (isMatchOldHint || isMatchNewHint ) {
+		if (isMatchOldHint || isMatchNewHint ) {// 这里是注解SQL的解析流程，非主流程，暂且不做分析                               @windlike
 			
 			int endPos = stmt.indexOf("*/");
 			if (endPos > 0) {				
@@ -132,7 +132,7 @@ public class RouteService {
                 	throw new SQLSyntaxErrorException("comment in sql must meet :/*!mcat:type=value*/ or /*#mycat:type=value*/: "+stmt);
                 }
 			}
-		} else {
+		} else { // 主流程！
 			stmt = stmt.trim();
 			rrs = RouteStrategyFactory.getRouteStrategy().route(sysconf, schema, sqlType, stmt,
 					charset, sc, tableId2DataNodeCache);

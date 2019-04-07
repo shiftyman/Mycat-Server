@@ -48,6 +48,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ * 客户端报文处理总入口，实现类{@link org.opencloudb.server.ServerConnection}是关键
+ * 前面通过NIO，报文解析，一直分发到这里的 handle方法
+ *
  * @author mycat
  */
 public abstract class FrontendConnection extends AbstractConnection {
@@ -62,6 +65,10 @@ public abstract class FrontendConnection extends AbstractConnection {
 	protected byte[] seed;
 	protected String user;
 	protected String schema;
+
+	/**
+	 * 当前执行的SQL
+	 */
 	protected String executeSql;
 
 	protected FrontendPrivileges privileges;
@@ -85,6 +92,10 @@ public abstract class FrontendConnection extends AbstractConnection {
 		this.host = remoteAddr.getHostString();
 		this.port = localAddr.getPort();
 		this.localPort = remoteAddr.getPort();
+		/**
+		 * 首先是auth的handler,
+		 * auth通过后会转成{@link FrontendCommandHandler}
+		 */
 		this.handler = new FrontendAuthenticator(this);
 	}
 
@@ -303,7 +314,7 @@ public abstract class FrontendConnection extends AbstractConnection {
 			// 记录SQL
 			this.setExecuteSql(sql);
 
-			// 执行查询
+			// 执行查询: 查询是笼统的说法，insert等语句都是查询！										~~~ @windlike
 			queryHandler.setReadOnly(privileges.isReadOnly(user));
 			queryHandler.query(sql);
 		} else {

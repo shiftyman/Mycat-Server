@@ -310,7 +310,7 @@ public abstract class AbstractConnection implements NIOConnection {
 				buffer.position(offset);
 				byte[] data = new byte[length];
 				buffer.get(data, 0, length);
-				handle(data);
+				handle(data);//数据处理
 
 				offset += length;
 				if (position == offset) {

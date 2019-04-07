@@ -79,6 +79,10 @@ public class SQLJob implements ResponseHandler, Runnable {
 		}
 	}
 
+	/**
+	 * 重点
+	 * @param conn
+	 */
 	@Override
 	public void connectionAcquired(final BackendConnection conn) {
 		if (LOGGER.isDebugEnabled()) {

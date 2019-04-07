@@ -109,7 +109,7 @@ public final class NIOAcceptor extends Thread  implements SocketAcceptor{
 		try {
 			channel = serverChannel.accept();
 			channel.configureBlocking(false);
-			FrontendConnection c = factory.make(channel);
+			FrontendConnection c = factory.make(channel);//构造ServerConnection
 			c.setAccepted(true);
 			c.setId(ID_GENERATOR.getId());
 			NIOProcessor processor = (NIOProcessor) MycatServer.getInstance()

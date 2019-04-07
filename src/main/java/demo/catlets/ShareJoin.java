@@ -50,6 +50,11 @@ public class ShareJoin implements Catlet {
 	private JoinParser joinParser;
 	
 	private Map<String, byte[]> rows = new ConcurrentHashMap<String, byte[]>();
+
+	/**
+	 * Map<左表的id, 两表的join key>
+	 *     by windlike
+	 */
 	private Map<String,String> ids = new ConcurrentHashMap<String,String>();
 	//private ConcurrentLinkedQueue<String> ids = new ConcurrentLinkedQueue<String>();
 	
@@ -200,8 +205,8 @@ public class ShareJoin implements Catlet {
 		int count = 0;
 		Map<String, byte[]> batchRows = new ConcurrentHashMap<String, byte[]>();
 		String theId = null;
-		StringBuilder sb = new StringBuilder().append('(');
-		String svalue="";
+		StringBuilder sb = new StringBuilder().append('(');// 将join key包装成（x，y，z）,然后组装成in语句，到B表去查询
+		String svalue="";//这个主要用于去重，比如：id=1，joinkey=1 && id=2，joinkey=1，只要查询一次joinKey=1即可 by windlike
 		for(Map.Entry<String,String> e: ids.entrySet() ){
 			theId=e.getKey();
 			batchRows.put(theId, rows.remove(theId));
@@ -232,6 +237,8 @@ public class ShareJoin implements Catlet {
 		}
 		jointTableIsData=true;
 		sb.deleteCharAt(sb.length() - 1).append(')');
+
+		// 组装成in语句 select joinkey,xx,xx from B where joinkey in (x,y,z)
 		String sql = String.format(joinParser.getChildSQL(), sb);
 		//if (!childRoute){
 		  getRoute(sql);
@@ -325,7 +332,7 @@ class ShareDBJoinHandler implements SQLJobHandler {
 	public boolean onRowData(String dataNode, byte[] rowData) {
 		int fid=this.ctx.getFieldIndex(fields,joinkey);
 		String id = ResultSetUtil.getColumnValAsString(rowData, fields, 0);//主键，默认id
-		String nid = ResultSetUtil.getColumnValAsString(rowData, fields, fid);
+		String nid = ResultSetUtil.getColumnValAsString(rowData, fields, fid);// 这个是join key！！！
 		// 放入结果集
 		//rows.put(id, rowData);
 		ctx.putDBRow(id,nid, rowData,fid);
@@ -339,6 +346,9 @@ class ShareDBJoinHandler implements SQLJobHandler {
 
 }
 
+/**
+ * share join的客户端回写handler
+ */
 class ShareRowOutPutDataHandler implements SQLJobHandler {
 	private final List<byte[]> afields;
 	private List<byte[]> bfields;
@@ -346,7 +356,7 @@ class ShareRowOutPutDataHandler implements SQLJobHandler {
 	private final Map<String, byte[]> arows;
 	private int joinL;//A表(左边)关联字段的位置
 	private int joinR;//B表(右边)关联字段的位置
-	private String joinRkey;//B表(右边)关联字段
+	private String joinRkey;//B表(右边)关联字段（关联字段在两表中的名字可能是不同的）
 	public ShareRowOutPutDataHandler(ShareJoin ctx,List<byte[]> afields,int joini,String joinField,Map<String, byte[]> arows) {
 		super();
 		this.afields = afields;

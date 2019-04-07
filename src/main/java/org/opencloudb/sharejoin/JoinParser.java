@@ -57,7 +57,7 @@ public class JoinParser {
 	   parserTable(table,tableFilter,false);
 	   
 	   parserFields(mysqlQuery.getSelectList()); 
-	   parserMaserTable();	   
+	   parserMaserTable();	 // parserMasterTable
 	   
 	   parserWhere(mysqlQuery.getWhere(),"");	   
 	 // getJoinField();
@@ -291,8 +291,12 @@ public class JoinParser {
 		else {
 			return " ASC ";		
 		}
-	}		
-	
+	}
+
+	/**
+	 * select {joinRkey},"+sql+" from "+mtable+" where {joinRkey} in %s
+	 * @return
+	 */
 	public String getChildSQL(){		
 		//String sql="select "+joinRkey+","+sql+" from "+mtable+" where "+joinRkey+" in ";
 		String sql=tableFilter.getTableJoin().getSQL();
