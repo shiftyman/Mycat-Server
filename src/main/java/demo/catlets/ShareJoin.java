@@ -85,7 +85,7 @@ public class ShareJoin implements Catlet {
 	
 	public void route(SystemConfig sysConfig, SchemaConfig schema,int sqlType, String realSQL, String charset, ServerConnection sc,	LayerCachePool cachePool) {
 		int rs = ServerParse.parse(realSQL);
-		this.sqltype = rs & 0xff;
+		this.sqltype = rs & 0xff;// parse得到sqlType，如select、insert、update之类
 		this.sysConfig=sysConfig; 
 		this.schema=schema;
 		this.charset=charset; 
@@ -96,7 +96,7 @@ public class ShareJoin implements Catlet {
 		  // rrs =RouteStrategyFactory.getRouteStrategy().route(sysConfig, schema, sqlType2, realSQL,charset, sc, cachePool);		   
 			MySqlStatementParser parser = new MySqlStatementParser(realSQL);			
 			SQLStatement statement = parser.parseStatement();
-			if(statement instanceof SQLSelectStatement) {
+			if(statement instanceof SQLSelectStatement) {// JOIN只会是SELECT，其他情况都是异常
 			   SQLSelectStatement st=(SQLSelectStatement)statement;
 			   SQLSelectQuery sqlSelectQuery =st.getSelect().getQuery();
 				if(sqlSelectQuery instanceof MySqlSelectQueryBlock) {
@@ -144,8 +144,8 @@ public class ShareJoin implements Catlet {
 		return dataNode;
 	}
 	public void processSQL(String sql, EngineCtx ctx) {
-		String ssql=joinParser.getSql();
-		getRoute(ssql);
+		String ssql=joinParser.getSql();// 得到左表的单SQL
+		getRoute(ssql);// 对左表求ROUTE（和普通语句一样的流程）
 		RouteResultsetNode[] nodes = rrs.getNodes();
 		if (nodes == null || nodes.length == 0 || nodes[0].getName() == null
 				|| nodes[0].getName().equals("")) {
@@ -157,10 +157,14 @@ public class ShareJoin implements Catlet {
 		this.ctx=ctx;
 		String[] dataNodes =getDataNodes();
 		maxjob=dataNodes.length;
-		ShareDBJoinHandler joinHandler = new ShareDBJoinHandler(this,joinParser.getJoinLkey());		
+		ShareDBJoinHandler joinHandler = new ShareDBJoinHandler(this,joinParser.getJoinLkey());
+
+		// 执行左表单sql，查出结果集，在joinHandler里处理这个结果集
+		// joinHandler的行为主要是拿到A表的joinkey，然后到B表进行查询
 		ctx.executeNativeSQLSequnceJob(dataNodes, ssql, joinHandler);
     	EngineCtx.LOGGER.info("Catlet exec:"+getDataNode(getDataNodes())+" sql:" +ssql);
 
+    	// 当JOIN语句拆分出来的所有子SQL都查询完毕、结果也聚合完毕后，向client发送响应结果的结束符EOF
 		ctx.setAllJobFinishedListener(new AllJobFinishedListener() {
 			@Override
 			public void onAllJobFinished(EngineCtx ctx) {				
@@ -179,7 +183,7 @@ public class ShareJoin implements Catlet {
     	joinindex=findex;
 		//ids.offer(nid);
 		int batchSize = 999;
-		// 满1000条，发送一个查询请求
+		// 满1000条，发送一个查询请求，这里是通过A表的join key，取查询Ｂ表
 		if (ids.size() > batchSize) {
 			createQryJob(batchSize);
 		}            	
@@ -244,6 +248,8 @@ public class ShareJoin implements Catlet {
 		  getRoute(sql);
 		 //childRoute=true;
 		//}
+		// 查询B表，并且把结果传送给ShareRowOutPutDataHandler处理
+		// ShareRowOutPutDataHandler的处理时将A、B表查询的结果聚合，并且发送响应报文给client
 		ctx.executeNativeSQLParallJob(getDataNodes(),sql, new ShareRowOutPutDataHandler(this,fields,joinindex,joinParser.getJoinRkey(), batchRows));
 		EngineCtx.LOGGER.info("SQLParallJob:"+getDataNode(getDataNodes())+" sql:" + sql);		
 	}  
@@ -403,6 +409,7 @@ class ShareRowOutPutDataHandler implements SQLJobHandler {
 	}
 
 	@Override
+	// 这里把A、B查询得到的结果聚合，并且响应客户端
 	public boolean onRowData(String dataNode, byte[] rowData) {
 		RowDataPacket rowDataPkgold = ResultSetUtil.parseRowData(rowData, bfields);
 		//拷贝一份batchRows

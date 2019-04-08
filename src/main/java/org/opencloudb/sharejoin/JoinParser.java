@@ -53,16 +53,16 @@ public class JoinParser {
 	public void parser(){
 	   masterTable="";	   
 	   
-	   SQLTableSource table=mysqlQuery.getFrom();	   
-	   parserTable(table,tableFilter,false);
+	   SQLTableSource table=mysqlQuery.getFrom();	// 因为是join，这里的table包含多个表
+	   parserTable(table,tableFilter,false);// 解析分解join的表，join的key等元素
 	   
-	   parserFields(mysqlQuery.getSelectList()); 
-	   parserMaserTable();	 // parserMasterTable
+	   parserFields(mysqlQuery.getSelectList()); // 解析查询的字段
+	   parserMaserTable();// 解析主表，默认以第一个表为主表
 	   
-	   parserWhere(mysqlQuery.getWhere(),"");	   
+	   parserWhere(mysqlQuery.getWhere(),"");// 解析where条件
 	 // getJoinField();
-	   parserOrderBy(mysqlQuery.getOrderBy());
-	   parserLimit();
+	   parserOrderBy(mysqlQuery.getOrderBy());// 解析order by条件
+	   parserLimit();// 解析limit条件
 	  // LOGGER.info("field "+fieldAliasMap);	  	   
 	  // LOGGER.info("master "+masterTable);
 	 //  LOGGER.info("join Lkey "+getJoinLkey()); 
@@ -82,10 +82,10 @@ public class JoinParser {
 				}
 			}
 			//parserTable(table1.getLeft());	//SQLExprTableSource
-			parserTable(table1.getRight(),tFilter,true);
+			parserTable(table1.getRight(),tFilter,true);// 递归解析得到多个表的关联tableFilter链
 			
 			SQLExpr expr=table1.getCondition();//SQLBinaryOpExpr
-			parserJoinKey(expr);
+			parserJoinKey(expr);// 解析得到join的key
 		}
 		else {
 			tFilter=setTableFilter(tFilter,getTableFilter(table,isOutJoin));
@@ -291,8 +291,8 @@ public class JoinParser {
 		else {
 			return " ASC ";		
 		}
-	}
-
+	}		
+	
 	/**
 	 * select {joinRkey},"+sql+" from "+mtable+" where {joinRkey} in %s
 	 * @return
@@ -304,6 +304,12 @@ public class JoinParser {
 	}
 	
 	public String getSql(){
+		// 这里获取的不是原来的sql，而是JOIN语句第一个张表的拆分SQL
+		// 上面已经对JOIN语句做过parse，得到一个tableFilter链，每个tableFilter包含JOIN语句中的一个table，从左到右
+		// 值得一提的是，目前仅支持2表JOIN语句，这里获取的是左表的单sql语句
+		//
+		// 比如：SELECT a.*,b.* FROM a JOIN b ON a.id = b.a_id;
+		// 这里大概得到的是：SELECT a.* FROM a
 		stmt=tableFilter.getSQL();
 		return stmt;
 	}

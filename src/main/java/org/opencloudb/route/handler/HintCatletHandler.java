@@ -42,7 +42,7 @@ public class HintCatletHandler implements HintHandler {
 			LayerCachePool cachePool, String hintSQLValue,int hintSqlType, Map hintMap)
 			throws SQLNonTransientException {
 		// sc.setEngineCtx ctx
-		String cateletClass = hintSQLValue;
+		String cateletClass = hintSQLValue;// demo.catlets.ShareJoin
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("load catelet class:" + hintSQLValue + " to run sql "
 					+ realSQL);
@@ -50,6 +50,9 @@ public class HintCatletHandler implements HintHandler {
 		try {
 			Catlet catlet = (Catlet) MycatServer.getInstance()
 					.getCatletClassLoader().getInstanceofClass(cateletClass);
+
+			// 这里虽然调用route，但是主要逻辑却是通过joinParser.parser()将join sql进行解析和分解，得到TableFilter链
+			// 每个tableFilter包含JOIN语句中的一个table，从左到右，第一个tableFilter中的join字段指向第二个tableFilter
 			catlet.route(sysConfig, schema, sqlType, realSQL,charset, sc, cachePool);
 			catlet.processSQL(realSQL, new EngineCtx(sc.getSession2()));
 		} catch (Exception e) {
