@@ -73,6 +73,7 @@ public abstract class AbstractRouteStrategy implements RouteStrategy {
 		} else {
 			RouteResultset returnedSet = routeSystemInfo(schema, sqlType, stmt, rrs);
 			if (returnedSet == null) {
+				// 首先通过Druid库对SQL进行parse，得到AST。然后再结合SQL的信息和分片配置的进行路由计算
 				rrs = routeNormalSqlWithAST(schema, stmt, rrs, charset, cachePool);
 			}
 		}
@@ -87,7 +88,7 @@ public abstract class AbstractRouteStrategy implements RouteStrategy {
 			throws SQLNonTransientException {
 		
 		return RouterUtil.processWithMycatSeq(schema, sqlType, origSQL, sc)
-				|| (sqlType == ServerParse.INSERT && RouterUtil.processERChildTable(schema, origSQL, sc))
+				|| (sqlType == ServerParse.INSERT && RouterUtil.processERChildTable(schema, origSQL, sc))// 这里处理ER-JOIN关联的子表路由
 				|| (sqlType == ServerParse.INSERT && RouterUtil.processInsert(schema, sqlType, origSQL, sc));
 	}
 

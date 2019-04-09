@@ -61,9 +61,10 @@ public class DruidInsertParser extends DefaultDruidParser {
 			LOGGER.warn(msg);
 			throw new SQLNonTransientException(msg);
 		} else {
-			//childTable的insert直接在解析过程中完成路由(忽略，没必要探究了 @windlike)
+			//childTable的insert直接在解析过程中完成路由
+			// 理论上不会走到这步，因为前面已经做了这个逻辑，这是历史遗留代码？ (忽略，没必要探究了 @windlike)
 			if (tc.isChildTable()) {
-				parserChildTable(schema, rrs, tableName, insert);
+				parserChildTable(schema, rrs, tableName, insert);// 流程同之前分析的子表insert
 				return;
 			}
 			

@@ -60,7 +60,7 @@ public class DruidMycatRouteStrategy extends AbstractRouteStrategy {
 		checkUnSupportedStatement(statement);
 
 		/**
-		 * 解析Sql + 路由（有部分SQL不能在这一步完成路由）
+		 * 解析Sql + 路由（少数非主流SQL不能在这一步完成路由，不做讨论~）
 		 * add by windlike
 		 */
 		DruidParser druidParser = DruidParserFactory.create(schema, statement, visitor);

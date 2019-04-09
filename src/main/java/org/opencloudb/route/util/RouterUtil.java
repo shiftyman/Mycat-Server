@@ -664,8 +664,8 @@ public class RouterUtil {
 			RouteResultset rrs, TableConfig tc, String joinKeyVal)
 			throws SQLNonTransientException {
 
-		// 父子表配置，只支持2级，多级的话返回null
-		// 另一个条件是：parent表的分区key=child表的parentKey（规避配置错误）
+		// 父子表配置，目前只支持2级（两张表的JOIN），多级的话返回null
+		// 另一个条件是：parent表的sharding key=child表的parentKey（规避配置错误）
 		// only has one parent level and ER parent key is parent
 		// table's partition key
 		if (tc.isSecondLevel()
@@ -678,6 +678,8 @@ public class RouterUtil {
 			Set<ColumnRoutePair> parentColVal = new HashSet<ColumnRoutePair>(1);
 			ColumnRoutePair pair = new ColumnRoutePair(joinKeyVal);
 			parentColVal.add(pair);
+
+			// 根据parent table的config和join key（父表的shard key）获取父表的路由节点，即得到子表的路由节点
 			Set<String> dataNodeSet = ruleCalculate(tc.getParentTC(), parentColVal);
 			if (dataNodeSet.isEmpty() || dataNodeSet.size() > 1) {
 				throw new SQLNonTransientException(
@@ -689,7 +691,7 @@ public class RouterUtil {
 				LOGGER.debug("found partion node (using parent partion rule directly) for child table to insert  "
 						+ dn + " sql :" + stmt);
 			}
-			return RouterUtil.routeToSingleNode(rrs, dn, stmt);
+			return RouterUtil.routeToSingleNode(rrs, dn, stmt);// 返回得到的路由节点
 		}
 		return null;
 	}
@@ -757,6 +759,8 @@ public class RouterUtil {
 
 
 	/**
+	 * 根据TableConfig和路由key计算dataNodeIndex
+	 *
 	 * @return dataNodeIndex -&gt; [partitionKeysValueTuple+]
 	 */
 	public static Set<String> ruleCalculate(TableConfig tc,
@@ -911,7 +915,7 @@ public class RouterUtil {
 			throw new SQLNonTransientException(msg);
 		}
 		
-		if(tc.isGlobalTable()) {//全局表
+		if(tc.isGlobalTable()) {//全局表: 查询随机取一个，修改返回全部dataNode
 			if(isSelect) {
 				// global select ,not cache route result
 				rrs.setCacheAble(false);
@@ -925,7 +929,7 @@ public class RouterUtil {
 						+ tc.getName() + " is required: " + ctx.getSql());
 
 			}
-			if(tc.getPartitionColumn() == null && !tc.isSecondLevel()) {//单表且不是childTable
+			if(tc.getPartitionColumn() == null && !tc.isSecondLevel()) {//没有分片字段，路由到全部DataNode。单表且不是childTable
 //				return RouterUtil.routeToSingleNode(rrs, tc.getDataNodes().get(0),ctx.getSql());
 				return routeToMultiNode(rrs.isCacheAble(), rrs, tc.getDataNodes(), ctx.getSql());
 			} else {
@@ -1208,28 +1212,31 @@ public class RouterUtil {
 
 		if (null != tc && tc.isChildTable()) {// 当前schema是否是一个child table
 			final RouteResultset rrs = new RouteResultset(origSQL, ServerParse.INSERT);
-			String joinKey = tc.getJoinKey();
+			String joinKey = tc.getJoinKey();// 从xml配置中找到join key的字段
 			MySqlInsertStatement insertStmt = (MySqlInsertStatement) (new MySqlStatementParser(origSQL)).parseInsert();
-			int joinKeyIndex = getJoinKeyIndex(insertStmt.getColumns(), joinKey);
+			int joinKeyIndex = getJoinKeyIndex(insertStmt.getColumns(), joinKey);//
 
 			if (joinKeyIndex == -1) {
 				String inf = "joinKey not provided :" + tc.getJoinKey() + "," + insertStmt;
 				LOGGER.warn(inf);
 				throw new SQLNonTransientException(inf);
 			}
+
+			// 子表不支持批量insert语句
 			if (isMultiInsert(insertStmt)) {
 				String msg = "ChildTable multi insert not provided";
 				LOGGER.warn(msg);
 				throw new SQLNonTransientException(msg);
 			}
 
+			// joinKey的值
 			//String joinKeyVal = insertStmt.getValues().getValues().get(joinKeyIndex).toString();
 			String joinKeyVal = StringUtil.removeBackquote(insertStmt.getValues().getValues().get(joinKeyIndex).toString());
 
 			String sql = insertStmt.toString();
 
 			// try to route by ER parent partion key
-			// 此处是ER跨库join问题处理，需要确保子表和父表的路由一致，才能进行同库join操作
+			// 此处是ER跨库join问题处理，需要确保子表和父表的路由一致，后续才能进行同库join操作
 			RouteResultset theRrs = RouterUtil.routeByERParentKey(sc, schema, ServerParse.INSERT, sql, rrs, tc, joinKeyVal);
 
 			if (theRrs != null) {
