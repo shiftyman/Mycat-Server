@@ -82,10 +82,10 @@ public class MultiNodeQueryHandler extends MultiNodeHandler implements
 			LOGGER.debug("execute mutinode query " + rrs.getStatement());
 		}
 		this.rrs = rrs;
-		if (ServerParse.SELECT == sqlType && rrs.needMerge()) {
+		if (ServerParse.SELECT == sqlType && rrs.needMerge()) {// 如果是select且路由时决定需要merge
 			dataMergeSvr = new DataMergeService(this, rrs);
 		} else {
-			dataMergeSvr = null;
+			dataMergeSvr = null;// dataMergeSvr=null，执行sql后结果会直接输出到client
 		}
 		isCallProcedure = rrs.isCallStatement();
 		this.autocommit = session.getSource().isAutocommit();
@@ -125,6 +125,7 @@ public class MultiNodeQueryHandler extends MultiNodeHandler implements
 		for (final RouteResultsetNode node : rrs.getNodes()) {
 			BackendConnection conn = session.getTarget(node);
 			if (session.tryExistsCon(conn, node)) {
+				// 投放到business线程池并行执行
 				_execute(conn, node);
 			} else {
 				// create new connection
@@ -268,7 +269,7 @@ public class MultiNodeQueryHandler extends MultiNodeHandler implements
 			}
 		}
 
-		if (decrementCountBy(1)) {
+		if (decrementCountBy(1)) {// 此次查询的总数减1，如果为0，说明所有节点都返回完毕
             if (!rrs.isCallStatement()||(rrs.isCallStatement()&&rrs.getProcedure().isResultSimpleValue())) {
 				if (this.autocommit) {// clear all connections
 					session.releaseConnections(false);
@@ -279,14 +280,14 @@ public class MultiNodeQueryHandler extends MultiNodeHandler implements
 					return;
 				}
 			}
-			if (dataMergeSvr != null) {
+			if (dataMergeSvr != null) {// 需要merge处理的
 				try {
 					dataMergeSvr.outputMergeResult(session, eof);
 				} catch (Exception e) {
 					handleDataProcessException(e);
 				}
 
-			} else {
+			} else {// 其他的表示结果直接汇总，会直接返回client eof结束符
 				try {
 					lock.lock();
 					eof[3] = ++packetId;
@@ -510,7 +511,7 @@ public class MultiNodeQueryHandler extends MultiNodeHandler implements
 				// @author Uncle-pan
 				// @since 2016-03-25
 				dataMergeSvr.onNewRecord(dataNode, row);
-			} else {
+			} else {// 不merge，多node情况下，直接write结果给client
 				// cache primaryKey-> dataNode
 				if (primaryKeyIndex != -1) {
 					RowDataPacket rowDataPkg = new RowDataPacket(fieldCount);

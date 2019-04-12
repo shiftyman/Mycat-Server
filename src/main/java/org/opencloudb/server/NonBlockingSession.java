@@ -122,16 +122,16 @@ public class NonBlockingSession implements Session {
 							+ source.getSchema());
 			return;
 		}
-		if (nodes.length == 1) {
+		if (nodes.length == 1) { // 单节点路由
 			singleNodeHandler = new SingleNodeHandler(rrs, this);
 			try {
-				singleNodeHandler.execute();
+				singleNodeHandler.execute();// 后端访问由business线程池执行
 			} catch (Exception e) {
 				LOGGER.warn(new StringBuilder().append(source).append(rrs), e);
 				source.writeErrMessage(ErrorCode.ERR_HANDLE_DATA, e.toString());
 			}
 		} else {
-			boolean autocommit = source.isAutocommit();
+			boolean autocommit = source.isAutocommit();// 是否启用事务
 			SystemConfig sysConfig = MycatServer.getInstance().getConfig()
 					.getSystem();
 			int mutiNodeLimitType = sysConfig.getMutiNodeLimitType();

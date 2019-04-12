@@ -658,9 +658,11 @@ public class JDBCConnection implements BackendConnection {
             byte[] eof = new byte[byteBuf.limit()];
             byteBuf.get(eof);
             byteBuf.clear();
+            // 行数据之前的field等header信息，只会write一次给client，有变量去做这个判断
             this.respHandler.fieldEofResponse(header, fields, eof, this);
 
             // output row
+			// 行数据
             while (rs.next()) {
                 RowDataPacket curRow = new RowDataPacket(colunmCount);
                 for (int i = 0; i < colunmCount; i++) {
@@ -678,6 +680,7 @@ public class JDBCConnection implements BackendConnection {
             }
 
             // end row
+			// 结束符，所有node都返回之后，才真正写eof到client
             eofPckg = new EOFPacket();
             eofPckg.packetId = ++packetId;
             byteBuf = eofPckg.write(byteBuf, sc, false);

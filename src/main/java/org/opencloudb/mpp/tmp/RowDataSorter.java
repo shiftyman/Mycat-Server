@@ -54,7 +54,7 @@ public class RowDataSorter extends RowDataPacketSorter {
 			heap.buildHeap();
 			hasBuild = true;
 		}
-		return heap.addIfRequired(row);
+		return heap.addIfRequired(row);// 如果比堆顶小，则不能入堆
 	}
 
 	@Override

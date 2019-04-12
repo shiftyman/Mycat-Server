@@ -95,6 +95,7 @@ public class PhysicalDBNode {
 		checkRequest(schema);
 		if (dbPool.isInitSuccess()) {
 			if (rrs.canRunnINReadDB(autoCommit)) {
+				// 如果允许读写分离，则根据负载均衡算法获取RW库链接
 				dbPool.getRWBanlanceCon(schema,autoCommit, handler, attachment,
 						this.database);
 			} else {

@@ -198,6 +198,7 @@ public class DataMergeService implements Runnable {
 			return true;
 		}
 		if (canDiscard.get(dataNode) != null) {
+			// 该node已经处理完毕了，比如order by desc，如果当前node的前一行已经小于现有结果的最小值，那么后续的行都不需要再处理了，会把node加入到canDiscard中
 			return true;
 		}
 		final PackWraper data = new PackWraper();
@@ -257,7 +258,7 @@ public class DataMergeService implements Runnable {
 					break;
 				}
 				// eof: handling eof pack and exit
-				if (pack == END_FLAG_PACK) {
+				if (pack == END_FLAG_PACK) {// 输出eof结束符
 					final int warningCount = 0;
 					final EOFPacket eofp   = new EOFPacket();
 					final ByteBuffer eof   = ByteBuffer.allocate(9);
@@ -274,14 +275,18 @@ public class DataMergeService implements Runnable {
 				// merge: sort-or-group, or simple add
 				final RowDataPacket row = new RowDataPacket(fieldCount);
 				row.read(pack.data);
-				if (grouper != null) {
+				if (grouper != null) {// 处理group by
 					grouper.addRow(row);
 				} else if (sorter != null) {
+					// 处理order by：最大堆，堆大小=offset+limit，意味着每个节点都查offset+limit的数据进行堆排序
+					// 这种做法能保证准确性，但是性能随着offset在增大而严重下降
 					if (!sorter.addRow(row)) {
+						// 由于是从各节点查询出来已经有序，如果当前行不能入堆，说明后续所有行都不能入堆
+						// 将这个node加入canDiscard列表，说明这个node的结果已经取完，后续还有结果也不会处理了
 						canDiscard.put(pack.node, true);
 					}
 				} else {
-					result.add(row);
+					result.add(row);// 直接将结果汇总
 				}
 			}// rof
 		}catch(final Exception e){
@@ -312,7 +317,7 @@ public class DataMergeService implements Runnable {
 			return false;
 		}
 		final MycatServer server = MycatServer.getInstance();
-		server.getBusinessExecutor().execute(this);
+		server.getBusinessExecutor().execute(this);// 异步处理
 		return true;
 	}
 
