@@ -622,6 +622,7 @@ public class JDBCConnection implements BackendConnection {
 
         try {
             stmt = con.createStatement();
+            // 1.向后端执行SQL查询
             rs = stmt.executeQuery(sql);
 
             List<FieldPacket> fieldPks = new LinkedList<FieldPacket>();
@@ -633,6 +634,7 @@ public class JDBCConnection implements BackendConnection {
             headerPkg.fieldCount = fieldPks.size();
             headerPkg.packetId = ++packetId;
 
+			// 2.整理和输出行数据之前的field等header信息，只会write一次给client（fieldEofResponse方法中有变量去做这个判断）
             byteBuf = headerPkg.write(byteBuf, sc, true);
             byteBuf.flip();
             byte[] header = new byte[byteBuf.limit()];
@@ -658,11 +660,10 @@ public class JDBCConnection implements BackendConnection {
             byte[] eof = new byte[byteBuf.limit()];
             byteBuf.get(eof);
             byteBuf.clear();
-            // 行数据之前的field等header信息，只会write一次给client，有变量去做这个判断
-            this.respHandler.fieldEofResponse(header, fields, eof, this);
+            // 行数据之前的field等header信息，只会write一次给client，有变量去做这个判断            this.respHandler.fieldEofResponse(header, fields, eof, this);
 
             // output row
-			// 行数据
+			// 3.行数据逐行处理（重点）
             while (rs.next()) {
                 RowDataPacket curRow = new RowDataPacket(colunmCount);
                 for (int i = 0; i < colunmCount; i++) {
@@ -680,7 +681,7 @@ public class JDBCConnection implements BackendConnection {
             }
 
             // end row
-			// 结束符，所有node都返回之后，才真正写eof到client
+			// 4.结束符处理，所有node都返回之后，才真正写eof到client
             eofPckg = new EOFPacket();
             eofPckg.packetId = ++packetId;
             byteBuf = eofPckg.write(byteBuf, sc, false);

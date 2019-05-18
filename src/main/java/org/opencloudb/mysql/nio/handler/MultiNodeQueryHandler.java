@@ -511,7 +511,7 @@ public class MultiNodeQueryHandler extends MultiNodeHandler implements
 				// @author Uncle-pan
 				// @since 2016-03-25
 				dataMergeSvr.onNewRecord(dataNode, row);
-			} else {// 不merge，多node情况下，直接write结果给client
+			} else {// 不merge，多node情况下，直接write结果给client，比如select * from A
 				// cache primaryKey-> dataNode
 				if (primaryKeyIndex != -1) {
 					RowDataPacket rowDataPkg = new RowDataPacket(fieldCount);

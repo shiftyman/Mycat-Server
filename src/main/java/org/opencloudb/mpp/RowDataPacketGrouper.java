@@ -139,6 +139,7 @@ public class RowDataPacketGrouper {
 	}
 
 	public void addRow(RowDataPacket rowDataPkg) {
+		// result为RowDataPacket对象的list，RowDataPacket保存了group by条件和所有聚合结果值
 		for (RowDataPacket row : result) {
 			if (sameGropuColums(rowDataPkg, row)) {// 相同group by条件的，合并到已有结果
 				aggregateRow(row, rowDataPkg);// 聚合，根据各种聚合进行合并，比如sum(x),min(y):执行 x字段数值相加 & y字段数值比较

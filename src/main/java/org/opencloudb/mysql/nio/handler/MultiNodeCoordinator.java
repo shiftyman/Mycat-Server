@@ -33,6 +33,8 @@ public class MultiNodeCoordinator implements ResponseHandler {
 		faileCount.set(0);
 		// 执行
 		int started = 0;
+
+		// 逐个发送commit命令
 		for (RouteResultsetNode rrn : session.getTargetKeys()) {
 			if (rrn == null) {
 				LOGGER.error("null is contained in RoutResultsetNodes, source = "
@@ -41,12 +43,16 @@ public class MultiNodeCoordinator implements ResponseHandler {
 			}
 			final BackendConnection conn = session.getTarget(rrn);
 			if (conn != null) {
+				// 将数据源的响应handler设置为自身
+				// 后续有响应时会调用okResponse或errorResponse方法
 				conn.setResponseHandler(this);
-				cmdHandler.sendCommand(session, conn);
+				cmdHandler.sendCommand(session, conn);//发送commit命令
 				++started;
 			}
 		}
 
+		// 部分node获取链接失败，打印日志并且设置failed=true（但并没有使用）
+		// 相当于部分node失败是不处理的（弱XA）
 		if (started < nodeCount) {
 			runningCount.set(started);
 			LOGGER.warn("some connection failed to execut "
@@ -77,18 +83,18 @@ public class MultiNodeCoordinator implements ResponseHandler {
 	public void errorResponse(byte[] err, BackendConnection conn) {
 		faileCount.incrementAndGet();
 
+		// 释放资源
 		if (this.cmdHandler.releaseConOnErr()) {
 			session.releaseConnection(conn);
 		} else {
-			
-			
-			
 			session.releaseConnectionIfSafe(conn, LOGGER.isDebugEnabled(),
 					false);
 		}
+		// finish表示这次是收到的最后一个响应，其他所有的running任务都已经响应过了
+		// 此时要做的，就是响应client，commit命令的结果
 		if (this.finished()) {
 			cmdHandler.errorResponse(session, err, this.nodeCount,
-					this.faileCount.get());
+					this.faileCount.get());// 响应client为失败
 			if (cmdHandler.isAutoClearSessionCons()) {
 				session.clearResources(session.getSource().isTxInterrupted());
 			}
@@ -98,14 +104,17 @@ public class MultiNodeCoordinator implements ResponseHandler {
 
 	@Override
 	public void okResponse(byte[] ok, BackendConnection conn) {
+		// 释放后端链接资源
 		if (this.cmdHandler.relaseConOnOK()) {
 			session.releaseConnection(conn);
 		} else {
 			session.releaseConnectionIfSafe(conn, LOGGER.isDebugEnabled(),
 					false);
 		}
+		// finish表示这次是收到的最后一个响应，其他所有的running任务都已经响应过了
+		// 此时要做的，就是响应client，commit命令的结果
 		if (this.finished()) {
-			cmdHandler.okResponse(session, ok);
+			cmdHandler.okResponse(session, ok);// 发送ok响应给client
 			if (cmdHandler.isAutoClearSessionCons()) {
 				session.clearResources(false);
 			}

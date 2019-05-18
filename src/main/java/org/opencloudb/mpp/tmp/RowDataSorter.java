@@ -45,16 +45,17 @@ public class RowDataSorter extends RowDataPacketSorter {
 
 	@Override
 	public synchronized boolean addRow(RowDataPacket row) {
+		// 堆未满，无条件入堆
 		if (heap.getData().size() < total) {
 			heap.add(row);
 			return true;
 		}
-		// 堆已满，构建最大堆，并执行淘汰元素逻辑
+		// 堆刚好已满，构建最大堆
 		if (heap.getData().size() == total && hasBuild == false) {
 			heap.buildHeap();
 			hasBuild = true;
 		}
-		return heap.addIfRequired(row);// 如果比堆顶小，则不能入堆
+		return heap.addIfRequired(row);// 如果比堆顶小（或者大，根据acs和desc排序条件确定），则不能入堆
 	}
 
 	@Override

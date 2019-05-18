@@ -149,16 +149,16 @@ public class NonBlockingSession implements Session {
 
 	public void commit() {
 		final int initCount = target.size();
-		if (initCount <= 0) {
+		if (initCount <= 0) {// 无路由，直接ok
 			ByteBuffer buffer = source.allocate();
 			buffer = source.writeToBuffer(OkPacket.OK, buffer);
 			source.write(buffer);
 			return;
-		} else if (initCount == 1) {
+		} else if (initCount == 1) {// 单节点路由，执行commit
 			BackendConnection con = target.elements().nextElement();
 			commitHandler.commit(con);
 
-		} else {
+		} else {// 多节点处理
 
 			if (LOGGER.isDebugEnabled()) {
 				LOGGER.debug("multi node commit to send ,total " + initCount);
